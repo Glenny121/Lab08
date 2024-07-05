@@ -1,7 +1,12 @@
+// MainActivity.java
 package com.example.appconbd;
+
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,21 +23,29 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private AppDatabase db;
+    private TextView tvDatos;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+
+        tvDatos = findViewById(R.id.tvDatos);
+        Button btnMostrarDatos = findViewById(R.id.btnMostrarDatos);
 
         db = MyApp.getInstance().getDatabase();
+
+        // Insertar datos de prueba
         insertarDatosDePrueba();
-        mostrarDatosInsertados();
+
+        // Configurar el botón para mostrar los datos
+        btnMostrarDatos.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mostrarDatosInsertados();
+            }
+        });
     }
 
     private void insertarDatosDePrueba() {
@@ -45,18 +58,34 @@ public class MainActivity extends AppCompatActivity {
         sala.descripcion = "Sala principal";
 
         Pintura pintura = new Pintura();
-        pintura.titulo = "Chalo";
-        pintura.tecnica = "Colores";
-        pintura.categoria = "Caricatura";
-        pintura.descripcion = "Un autorretrato en caricatura";
-        pintura.ano = 1997;
+        pintura.titulo = "Glennys";
+        pintura.tecnica = "Olea";
+        pintura.categoria = "Fotografía";
+        pintura.descripcion = "Una fotografía del bosque";
+        pintura.ano = 2024;
         pintura.enlace = "https://example.com/guernica.jpg";
 
         new InsertDataTask(db).execute(autor, sala, pintura);
     }
 
     private void mostrarDatosInsertados() {
-        new RetrieveDataTask(db).execute();
+        new RetrieveDataTask(db, new OnDataRetrievedListener() {
+            @Override
+            public void onDataRetrieved(List<PinturaInfo> pinturaInfos) {
+                StringBuilder datos = new StringBuilder();
+                for (PinturaInfo pinturaInfo : pinturaInfos) {
+                    datos.append("Titulo: ").append(pinturaInfo.titulo)
+                            .append(", Autor: ").append(pinturaInfo.autor)
+                            .append(", Técnica: ").append(pinturaInfo.tecnica)
+                            .append(", Categoría: ").append(pinturaInfo.categoria)
+                            .append(", Descripción: ").append(pinturaInfo.descripcion)
+                            .append(", Año: ").append(pinturaInfo.ano)
+                            .append(", Enlace: ").append(pinturaInfo.enlace)
+                            .append("\n\n");
+                }
+                tvDatos.setText(datos.toString());
+            }
+        }).execute();
     }
 
     private static class InsertDataTask extends AsyncTask<Object, Void, Void> {
@@ -82,9 +111,11 @@ public class MainActivity extends AppCompatActivity {
 
     private static class RetrieveDataTask extends AsyncTask<Void, Void, List<PinturaInfo>> {
         private AppDatabase db;
+        private OnDataRetrievedListener listener;
 
-        RetrieveDataTask(AppDatabase db) {
+        RetrieveDataTask(AppDatabase db, OnDataRetrievedListener listener) {
             this.db = db;
+            this.listener = listener;
         }
 
         @Override
@@ -94,15 +125,13 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(List<PinturaInfo> pinturaInfos) {
-            super.onPostExecute(pinturaInfos);
-
-            // Mostrar los datos recuperados en el log (o en una vista de tu elección)
-            for (PinturaInfo pinturaInfo : pinturaInfos) {
-                Log.d("MainActivity", "Titulo: " + pinturaInfo.titulo + ", Autor: " + pinturaInfo.autor +
-                        ", Técnica: " + pinturaInfo.tecnica + ", Categoría: " + pinturaInfo.categoria +
-                        ", Descripción: " + pinturaInfo.descripcion + ", Año: " + pinturaInfo.ano +
-                        ", Enlace: " + pinturaInfo.enlace);
+            if (listener != null) {
+                listener.onDataRetrieved(pinturaInfos);
             }
         }
+    }
+
+    interface OnDataRetrievedListener {
+        void onDataRetrieved(List<PinturaInfo> pinturaInfos);
     }
 }

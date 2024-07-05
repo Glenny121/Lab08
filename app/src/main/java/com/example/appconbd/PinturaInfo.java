@@ -1,3 +1,4 @@
+// PinturaInfo.java
 package com.example.appconbd;
 
 public class PinturaInfo {
